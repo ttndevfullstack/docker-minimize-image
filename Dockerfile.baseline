@@ -1,0 +1,72 @@
+# =============================================================================
+# Base state
+# =============================================================================
+FROM php:8.3-fpm AS base
+
+WORKDIR /var/www/html
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        git \
+        unzip \
+        libzip-dev \
+        libonig-dev \
+        libxml2-dev \
+    && docker-php-ext-install pdo_mysql mbstring zip bcmath opcache \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Copy source
+COPY . .
+
+# =============================================================================
+# Development stage
+# =============================================================================
+FROM base AS development
+
+# Install PHP deps
+RUN composer install \
+    # download zip instead of git clone (faster)
+    --prefer-dist \
+    # hide progress bar (cleaner logs)
+    --no-progress \
+    # no prompts (CI/CD friendly)
+    --no-interaction
+
+# Grant Permission
+RUN chown -R www-data:www-data /var/www/html && \
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+EXPOSE 8000
+
+CMD ["php-fpm"]
+
+# =============================================================================
+# Production stage
+# =============================================================================
+FROM base AS production
+
+# Install PHP deps
+RUN composer install \
+    # skip require-dev (only prod deps)
+    --no-dev \
+    # download zip instead of git clone (faster)
+    --prefer-dist \
+    # hide progress bar (cleaner logs)
+    --no-progress \
+    # no prompts (CI/CD friendly)
+    --no-interaction \
+    # optimize autoloader (faster runtime)
+    --optimize-autoloader
+
+# Grant Permission
+RUN chown -R www-data:www-data /var/www/html && \
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+EXPOSE 8000
+
+CMD ["php-fpm"]

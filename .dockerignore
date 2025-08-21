@@ -1,0 +1,26 @@
+# Ignore vendor (use composer install inside container)
+vendor/
+
+# Ignore node modules (use npm/yarn in container or CI/CD)
+node_modules/
+
+# Ignore environment files
+.env
+.env.*
+
+# Ignore Docker resources (volumes, configs mounted at runtime)
+z-docker-resources/
+
+# Ignore git stuff
+.git
+.gitignore
+
+# Ignore logs and caches
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+
+# Ignore tests and readme file
+tests
+README.md

@@ -1,0 +1,41 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.baseline
+      target: development
+    container_name: laravel_app
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_ENV: local
+    networks: [laravel]
+
+  web:
+    image: nginx:1.27-alpine
+    container_name: laravel_web
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+      - ./z-docker-resources/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on: [app]
+    networks: [laravel]
+
+  db:
+    image: mysql:8.0
+    container_name: laravel_db
+    environment:
+      MYSQL_DATABASE: minimize_image
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: ttndev
+      MYSQL_PASSWORD: ttndev
+    ports:
+      - "33060:3306"
+    volumes:
+      - ./z-docker-resources/volumes/dbdata:/var/lib/mysql
+    networks: [laravel]
+
+networks:
+  laravel:
+
