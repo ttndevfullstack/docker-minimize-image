@@ -1,5 +1,5 @@
 # =============================================================================
-# Base state
+# Stage 1: System builder
 # =============================================================================
 FROM php:8.3-fpm AS base
 
@@ -24,7 +24,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY . .
 
 # =============================================================================
-# Development stage
+# Stage 2: App builder (development)
 # =============================================================================
 FROM base AS development
 
@@ -37,16 +37,16 @@ RUN composer install \
     # no prompts (CI/CD friendly)
     --no-interaction
 
-# Grant Permission
-RUN chown -R www-data:www-data /var/www/html && \
-    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Grant permissions for storage & bootstrap cache
+RUN mkdir -p storage bootstrap/cache \
+    && chown -R 775 storage bootstrap/cache
 
 EXPOSE 8000
 
 CMD ["php-fpm"]
 
 # =============================================================================
-# Production stage
+# Stage 2: App builder (production)
 # =============================================================================
 FROM base AS production
 

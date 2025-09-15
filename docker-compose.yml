@@ -2,11 +2,17 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.baseline
+      dockerfile: Dockerfile.v2
       target: development
     container_name: laravel_app
     volumes:
-      - .:/var/www/html
+      - type: bind
+        source: .
+        target: /var/www/html
+      - type: volume
+        source: vendor_data
+        target: /var/www/html/vendor
+
     environment:
       APP_ENV: local
     networks: [laravel]
@@ -39,3 +45,5 @@ services:
 networks:
   laravel:
 
+volumes:
+  vendor_data:
