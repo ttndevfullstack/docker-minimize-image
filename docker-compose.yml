@@ -2,8 +2,9 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.v2
+      dockerfile: Dockerfile.v1
       target: development
+    image: docker-minimize-app:v3
     container_name: laravel_app
     volumes:
       - type: bind

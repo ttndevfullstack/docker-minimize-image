@@ -1,0 +1,74 @@
+# ==============================================================================
+# Stage 1: App dependencies
+# ==============================================================================
+FROM composer:2 AS vendor
+
+WORKDIR /app
+
+COPY ./composer.json ./composer.lock ./
+
+# BuildKit: install, cache composer donwload (SKIP composer scripts)
+RUN --mount=type=cache,target=/tmp/cache \
+    COMPOSER_CACHE_DIR=/tmp/cache \
+    composer install \
+        --no-dev \
+        --prefer-dist \
+        --no-progress \
+        --no-interaction \
+        --no-scripts \
+    && rm -rf /tmp/cache
+
+# ==============================================================================
+# Stage 2: App builder
+# ==============================================================================
+FROM php:8.3-fpm-alpine AS development
+
+WORKDIR /var/www/html
+
+# Runtime libs
+RUN set -eux; \
+    apk add --no-cache \
+        libzip \
+        libxml2 \
+        unzip \
+        git
+
+# Build deps for PHP extensions (remove after build)
+RUN set -eux; \
+    apk add --no-cache --virtual .build-deps \
+      $PHPIZE_DEPS \
+      libzip-dev \
+      libxml2-dev \
+      zlib-dev \
+    && docker-php-ext-configure zip \
+    && docker-php-ext-install -j"$(nproc)" \
+         pdo_mysql mbstring zip bcmath opcache \
+    && apk del .build-deps
+
+# Remove phpdbg to reduce image size
+RUN rm -f /usr/local/bin/phpdbg || true
+
+COPY . .
+COPY --from=vendor /app/vendor ./vendor
+
+# Grant permissions for storage & bootstrap cache
+RUN mkdir -p storage bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# Composer scripts
+RUN php artisan config:clear || true \
+    && php artisan cache:clear  || true \
+    && php artisan route:clear  || true \
+    && php artisan view:clear   || true
+
+# Copy entrypoint
+COPY entrypoint.sh /var/www/html/entrypoint.sh
+RUN chmod +x /var/www/html/entrypoint.sh
+
+EXPOSE 9000
+
+ENTRYPOINT ["/var/www/html/entrypoint.sh"]
+
+CMD ["php-fpm"]
+
